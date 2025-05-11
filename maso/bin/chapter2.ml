@@ -11,7 +11,7 @@ module Utility = struct
   let timestep_to_string (timestep : (int, int) Timeseries.Timestep.t) =
     Printf.sprintf
       "%s | %d | Label: %d | Data: %d"
-      timestep.timestamp
+      (Timeseries.timestamp_to_string timestep.timestamp)
       timestep.entry
       timestep.label
       timestep.data
@@ -33,11 +33,11 @@ end
 
 module State = struct
   type t =
-    { olin : int
-    ; wellesly : int
+    { olin : float
+    ; wellesly : float
     }
 
-  let to_string t = Printf.sprintf "olin:      %d\nwellesley: %d" t.olin t.wellesly
+  let to_string t = Printf.sprintf "olin:      %f\nwellesley: %f" t.olin t.wellesly
   let print t = print_string (to_string t)
 end
 
@@ -61,8 +61,8 @@ module Test = struct
   ;;
 end
 
-let bike_to_wellesly (t : State.t) : State.t = { olin = t.olin - 1; wellesly = t.wellesly + 1 }
-let bike_to_olin (t : State.t) : State.t = { olin = t.olin + 1; wellesly = t.wellesly - 1 }
+let bike_to_wellesly (t : State.t) : State.t = { olin = t.olin -. 1.; wellesly = t.wellesly +. 1. }
+let bike_to_olin (t : State.t) : State.t = { olin = t.olin +. 1.; wellesly = t.wellesly -. 1. }
 
 let step state wellelsly_probability olin_probability =
   let state' = if flip wellelsly_probability then bike_to_wellesly state else state in
@@ -70,31 +70,31 @@ let step state wellelsly_probability olin_probability =
   state''
 ;;
 
-(* let rec loop (grid : Tile.t Grid.t) pool = *)
-(*   match Raylib.window_should_close () with *)
-(*   | true -> Raylib.close_window () *)
-(*   | false -> *)
-(*     let new_grid = Domainslib.Task.run pool (fun _ -> parrallel_rule_apply pool grid) in *)
-(*     Raylib.begin_drawing (); *)
-(*     Raylib.clear_background Window.bg_color; *)
-(*     Grid.iter Tile.draw new_grid; *)
-(*     Raylib.end_drawing (); *)
-(*     loop new_grid pool *)
-(* ;; *)
-
 let rec loop state olin_series count =
   match count < 0 with
-  | true -> Utility.print_timeseries olin_series
+  | true -> olin_series
   | false ->
     let new_state = step state 0.5 0.33 in
-    let new_olin_series = Timeseries.add olin_series count new_state.olin in
+    let new_olin_series = Timeseries.add olin_series (Float.of_int count) new_state.olin in
     loop new_state new_olin_series (count - 1)
 ;;
 
 let () =
   print_endline "Chapter 2";
   Setup.init ();
-  let olin_timeseries = Timeseries.create () in
-  let initial_state : State.t = { olin = 10; wellesly = 2 } in
-  loop initial_state olin_timeseries 10
+  let (olin_timeseries : (float, float) Timeseries.t) = Timeseries.create () in
+  let initial_state : State.t = { olin = 10.; wellesly = 2. } in
+  let olin_timeseries' = loop initial_state olin_timeseries 10 in
+  (* Plot data start *)
+  let title = "Olin-Wellesly Bikeshare" in
+  let xaxis = Plot.Axis.create ~min:0.0 ~max:10.0 ~label:"Time Step" in
+  let yaxis = Plot.Axis.create ~min:0.0 ~max:15.0 ~label:"Number of Bikes" in
+  let xdata = Timeseries.map olin_timeseries' ~f:(fun step -> step.label) in
+  let ydata = Timeseries.map olin_timeseries' ~f:(fun step -> step.data) in
+  (let (data : Plot.Data.t) = Plot.Data.create (Array.of_list xdata) (Array.of_list ydata) in
+   Plot.init ();
+   Plot.plot xaxis yaxis data title;
+   Plot.finish ())
+  (* Plot data end *);
+  ()
 ;;

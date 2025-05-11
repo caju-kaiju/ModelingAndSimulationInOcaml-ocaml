@@ -1,4 +1,4 @@
 (executable
  (public_name Chapter2)
  (name chapter2)
- (libraries lib))
+ (libraries lib plplot))

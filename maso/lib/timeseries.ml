@@ -1,32 +1,11 @@
 [@@@ocaml.warning "-69-27-32-37-34-50"]
 
-(* type 'a t = *)
-(*   { nrows : int *)
-(*   ; ncols : int *)
-(*   ; elements : 'a list *)
-(*   } *)
-(**)
-(* type 'a element = *)
-(*   { row : int *)
-(*   ; col : int *)
-(*   ; element : 'a *)
-(*   } *)
-
-let get_timestamp () =
-  let today = Unix.localtime (Unix.time ()) in
-  let day = today.Unix.tm_mday in
-  let month = today.Unix.tm_mon + 1 in
-  let year = today.Unix.tm_year + 1990 in
-  let hour = today.Unix.tm_hour in
-  let min = today.Unix.tm_min in
-  let sec = today.Unix.tm_sec in
-  Printf.sprintf "%04d-%02d-%02d %02d:%02d:%02d" year month day hour min sec
-;;
+let get_timestamp () = Unix.localtime (Unix.time ())
 
 module Timestep = struct
   type ('a, 'b) t =
     { label : 'a
-    ; timestamp : String.t
+    ; timestamp : Unix.tm
     ; entry : int
     ; data : 'b
     }
@@ -35,6 +14,9 @@ module Timestep = struct
     let timestamp = get_timestamp () in
     { label; entry; timestamp; data }
   ;;
+
+  let label t = t.label
+  let data t = t.data
 end
 
 type ('a, 'b) t = { series : ('a, 'b) Timestep.t list }
@@ -51,6 +33,8 @@ let add t label data =
   let timestep = Timestep.new_timestep label entry data in
   add_timestep t timestep
 ;;
+
+let length t = List.length t.series
 
 let get_by_label t label =
   let rec aux (series : ('a, 'b) Timestep.t list) =
@@ -70,4 +54,15 @@ let get_by_entry t entry =
   aux t.series
 ;;
 
+let timestamp_to_string t =
+  let day = t.Unix.tm_mday in
+  let month = t.Unix.tm_mon + 1 in
+  let year = t.Unix.tm_year + 1990 in
+  let hour = t.Unix.tm_hour in
+  let min = t.Unix.tm_min in
+  let sec = t.Unix.tm_sec in
+  Printf.sprintf "%04d-%02d-%02d %02d:%02d:%02d" year month day hour min sec
+;;
+
 let iter t ~f = List.iter f t.series
+let map t ~f = List.map f t.series
